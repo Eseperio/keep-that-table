@@ -7,6 +7,15 @@ const DEFAULT_OPTIONS = {
   movePagination: false,
   itemRenderer: null,
   detailRenderer: null,
+  texts: {
+    filterButton: 'Filtrar',
+    sortButton: 'Ordenar por',
+    backButton: 'Volver',
+    summaryTitle: 'Resumen',
+    filterFallbackLabel: 'Filtro',
+    detailAriaLabelPrefix: 'Ver detalle de',
+    detailRowFallback: 'fila',
+  },
 };
 
 function createElement(tag, className) {
@@ -27,13 +36,13 @@ function applyTemplate(template, context) {
     let current = context;
 
     for (const segment of path) {
-      if (current == null) {
+      if (current === null || current === undefined) {
         return '';
       }
       current = current[segment];
     }
 
-    return current == null ? '' : String(current);
+    return current === null || current === undefined ? '' : String(current);
   });
 }
 
@@ -75,7 +84,14 @@ class BetterMobileTable {
     }
 
     this.table = tableElement;
-    this.options = { ...DEFAULT_OPTIONS, ...options };
+    this.options = {
+      ...DEFAULT_OPTIONS,
+      ...options,
+      texts: {
+        ...DEFAULT_OPTIONS.texts,
+        ...(options.texts || {}),
+      },
+    };
     this.isMobile = false;
     this.model = null;
 
@@ -83,6 +99,7 @@ class BetterMobileTable {
     this._movedNodes = [];
     this._filterControls = [];
     this._activeDetailIndex = null;
+    this._uidCounter = 0;
 
     this._createRoot();
     this.refresh();
@@ -256,7 +273,7 @@ class BetterMobileTable {
       }
 
       if (!label) {
-        label = control.getAttribute('aria-label') || control.name || control.id || 'Filtro';
+        label = control.getAttribute('aria-label') || control.name || control.id || this.options.texts.filterFallbackLabel;
       }
 
       controls.push({ control, label });
@@ -311,8 +328,9 @@ class BetterMobileTable {
     const markedCells = tfoot.querySelectorAll('td[data-mobile-footer],th[data-mobile-footer]');
     if (markedCells.length > 0) {
       markedCells.forEach((cell) => {
+        const headerLabel = headers[cell.cellIndex]?.label || '';
         scoped.push({
-          label: cell.dataset.mobileLabel || extractText(cell.closest('tr')?.cells?.[cell.cellIndex]) || 'Resumen',
+          label: cell.dataset.mobileLabel || headerLabel || this.options.texts.summaryTitle,
           html: cell.innerHTML,
         });
       });
@@ -382,11 +400,11 @@ class BetterMobileTable {
     if (hasFilters) {
       const filterButton = createElement('button', 'bmt-filter-button');
       filterButton.type = 'button';
-      filterButton.textContent = 'Filtrar';
+      filterButton.textContent = this.options.texts.filterButton;
 
       const panel = createElement('div', 'bmt-filter-panel');
       panel.hidden = true;
-      panel.id = `bmt-filter-panel-${Math.random().toString(36).slice(2)}`;
+      panel.id = this._nextId('bmt-filter-panel');
       filterButton.setAttribute('aria-controls', panel.id);
       filterButton.setAttribute('aria-expanded', 'false');
 
@@ -433,11 +451,11 @@ class BetterMobileTable {
     if (hasSortLinks) {
       const sortButton = createElement('button', 'bmt-sort-button');
       sortButton.type = 'button';
-      sortButton.textContent = 'Ordenar por';
+      sortButton.textContent = this.options.texts.sortButton;
 
       const menu = createElement('div', 'bmt-sort-menu');
       menu.hidden = true;
-      menu.id = `bmt-sort-menu-${Math.random().toString(36).slice(2)}`;
+      menu.id = this._nextId('bmt-sort-menu');
       sortButton.setAttribute('aria-controls', menu.id);
       sortButton.setAttribute('aria-expanded', 'false');
 
@@ -483,7 +501,7 @@ class BetterMobileTable {
 
       const button = createElement('button', 'bmt-list-item');
       button.type = 'button';
-      button.setAttribute('aria-label', `Ver detalle de ${context.title || `fila ${row.index + 1}`}`);
+      button.setAttribute('aria-label', `${this.options.texts.detailAriaLabelPrefix} ${context.title || `${this.options.texts.detailRowFallback} ${row.index + 1}`}`);
       button.append(itemElement);
 
       const chevron = createElement('span', 'bmt-chevron');
@@ -530,7 +548,7 @@ class BetterMobileTable {
         const header = createElement('div', 'bmt-detail-header');
         const backButton = createElement('button', 'bmt-back-button');
         backButton.type = 'button';
-        backButton.textContent = 'Volver';
+        backButton.textContent = this.options.texts.backButton;
         backButton.addEventListener('click', () => {
           this.closeDetail();
           this.list.querySelectorAll('.bmt-list-item')[rowIndex]?.focus();
@@ -548,7 +566,7 @@ class BetterMobileTable {
     const header = createElement('div', 'bmt-detail-header');
     const backButton = createElement('button', 'bmt-back-button');
     backButton.type = 'button';
-    backButton.textContent = 'Volver';
+    backButton.textContent = this.options.texts.backButton;
     backButton.addEventListener('click', () => {
       this.closeDetail();
       this.list.querySelectorAll('.bmt-list-item')[rowIndex]?.focus();
@@ -591,10 +609,10 @@ class BetterMobileTable {
     }
 
     const footer = createElement('div', 'bmt-footer');
-    footer.setAttribute('aria-label', 'Resumen');
+    footer.setAttribute('aria-label', this.options.texts.summaryTitle);
 
     const title = createElement('h4', 'bmt-footer-title');
-    title.textContent = this.table.tFoot?.dataset.mobileLabel || 'Resumen';
+    title.textContent = this.table.tFoot?.dataset.mobileLabel || this.options.texts.summaryTitle;
     footer.append(title);
 
     this.model.footer.forEach((entry) => {
@@ -681,7 +699,7 @@ class BetterMobileTable {
       this.root.hidden = false;
       this.table.classList.add('bmt-table-hidden');
       this._setSourcePaginationHidden(true);
-      if (this._activeDetailIndex == null) {
+      if (this._activeDetailIndex === null || this._activeDetailIndex === undefined) {
         this.listPanel.hidden = false;
         this.detailPanel.hidden = true;
       }
@@ -702,6 +720,11 @@ class BetterMobileTable {
     this.model.pagination.forEach((node) => {
       node.classList.toggle('bmt-source-hidden', hidden && !this.options.movePagination);
     });
+  }
+
+  _nextId(prefix) {
+    this._uidCounter += 1;
+    return `${prefix}-${this._uidCounter}`;
   }
 
   _returnMovedNodes() {

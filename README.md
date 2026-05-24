@@ -50,7 +50,16 @@ instance.destroy();
   moveFilters: true,
   movePagination: false,
   itemRenderer: null,
-  detailRenderer: null
+  detailRenderer: null,
+  texts: {
+    filterButton: 'Filtrar',
+    sortButton: 'Ordenar por',
+    backButton: 'Volver',
+    summaryTitle: 'Resumen',
+    filterFallbackLabel: 'Filtro',
+    detailAriaLabelPrefix: 'Ver detalle de',
+    detailRowFallback: 'fila'
+  }
 }
 ```
 
