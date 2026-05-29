@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BetterMobileTable Demo</title>
+  <link rel="stylesheet" href="../dist/better-mobile-table.css" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+  </style>
+</head>
+<body>
+  <h1>BetterMobileTable Demo</h1>
+
+  <table data-mobile-table>
+    <thead>
+      <tr>
+        <th data-mobile-title data-mobile-sort><a data-mobile-sort-link href="?sort=name">Nombre</a></th>
+        <th data-mobile-subtitle>Email</th>
+        <th data-mobile-hidden>ID</th>
+        <th>Acciones</th>
+      </tr>
+      <tr data-mobile-filter-row>
+        <td data-mobile-filter><input type="text" name="name" placeholder="Filtrar nombre"></td>
+        <td data-mobile-filter><input type="text" name="email" placeholder="Filtrar email"></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Juan Pérez</td>
+        <td>juan@email.com</td>
+        <td>1</td>
+        <td><a href="#">Ver</a> <a href="#">Editar</a></td>
+      </tr>
+      <tr>
+        <td>Ana Gómez</td>
+        <td>ana@email.com</td>
+        <td>2</td>
+        <td><a href="#">Ver</a> <a href="#">Editar</a></td>
+      </tr>
+    </tbody>
+    <tfoot data-mobile-footer data-mobile-label="Totales">
+      <tr>
+        <td>Total clientes</td>
+        <td>2</td>
+        <td>--</td>
+        <td>--</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <nav data-mobile-pagination>
+    <a href="#">Anterior</a> |
+    <a href="#">1</a> |
+    <a href="#">2</a> |
+    <a href="#">Siguiente</a>
+  </nav>
+
+  <script type="module">
+    import BetterMobileTable from '../dist/better-mobile-table.esm.js';
+    BetterMobileTable.init();
+  </script>
+</body>
+</html>
