@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -13,39 +13,46 @@
 </head>
 <body>
   <h1>BetterMobileTable Demo</h1>
+  <p><a href="./">All demos</a></p>
+  <label for="demo-language">Language:</label>
+  <select id="demo-language">
+    <option value="en">English</option>
+    <option value="es">Español</option>
+    <option value="auto">Auto detect</option>
+  </select>
 
   <table data-mobile-table>
     <thead>
       <tr>
-        <th data-mobile-title data-mobile-sort><a data-mobile-sort-link href="?sort=name">Nombre</a></th>
+        <th data-mobile-title data-mobile-sort><a data-mobile-sort-link href="?sort=name">Name</a></th>
         <th data-mobile-subtitle>Email</th>
         <th data-mobile-hidden>ID</th>
-        <th>Acciones</th>
+        <th>Actions</th>
       </tr>
       <tr data-mobile-filter-row>
-        <td data-mobile-filter><input type="text" name="name" placeholder="Filtrar nombre"></td>
-        <td data-mobile-filter><input type="text" name="email" placeholder="Filtrar email"></td>
+        <td data-mobile-filter><input type="text" name="name" placeholder="Filter by name"></td>
+        <td data-mobile-filter><input type="text" name="email" placeholder="Filter by email"></td>
         <td></td>
         <td></td>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td>Juan Pérez</td>
+        <td>Juan Perez</td>
         <td>juan@email.com</td>
         <td>1</td>
-        <td><a href="#">Ver</a> <a href="#">Editar</a></td>
+        <td><a href="#">View</a> <a href="#">Edit</a></td>
       </tr>
       <tr>
-        <td>Ana Gómez</td>
+        <td>Ana Gomez</td>
         <td>ana@email.com</td>
         <td>2</td>
-        <td><a href="#">Ver</a> <a href="#">Editar</a></td>
+        <td><a href="#">View</a> <a href="#">Edit</a></td>
       </tr>
     </tbody>
-    <tfoot data-mobile-footer data-mobile-label="Totales">
+    <tfoot data-mobile-footer data-mobile-label="Totals">
       <tr>
-        <td>Total clientes</td>
+        <td>Total customers</td>
         <td>2</td>
         <td>--</td>
         <td>--</td>
@@ -54,15 +61,26 @@
   </table>
 
   <nav data-mobile-pagination>
-    <a href="#">Anterior</a> |
+    <a href="#">Previous</a> |
     <a href="#">1</a> |
     <a href="#">2</a> |
-    <a href="#">Siguiente</a>
+    <a href="#">Next</a>
   </nav>
 
   <script type="module">
     import BetterMobileTable from '../dist/better-mobile-table.esm.js';
-    BetterMobileTable.init();
+
+    const table = document.querySelector('table[data-mobile-table]');
+    const languagePicker = document.querySelector('#demo-language');
+    let instance;
+
+    const initializeTable = () => {
+      instance?.destroy();
+      instance = new BetterMobileTable(table, { language: languagePicker.value });
+    };
+
+    initializeTable();
+    languagePicker.addEventListener('change', initializeTable);
   </script>
 </body>
 </html>

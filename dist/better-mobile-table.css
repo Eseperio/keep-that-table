@@ -24,6 +24,17 @@
   font-size: var(--bmt-font-size);
 }
 
+.bmt-root,
+.bmt-root * {
+  box-sizing: border-box;
+}
+
+/* Component layout rules must never override the hidden attribute. */
+.bmt-root[hidden],
+.bmt-root [hidden] {
+  display: none !important;
+}
+
 .bmt-toolbar {
   display: flex;
   gap: 8px;
@@ -33,7 +44,8 @@
 
 .bmt-filter-button,
 .bmt-sort-button,
-.bmt-back-button {
+.bmt-back-button,
+.bmt-close-button {
   border: 1px solid var(--bmt-border-color);
   background: var(--bmt-bg);
   color: var(--bmt-text-color);
@@ -41,6 +53,24 @@
   padding: 8px 12px;
   font: inherit;
   cursor: pointer;
+  min-height: 44px;
+}
+
+.bmt-close-button {
+  flex: 0 0 44px;
+  width: 44px;
+  padding: 0;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.bmt-root button:focus-visible,
+.bmt-root a:focus-visible,
+.bmt-root input:focus-visible,
+.bmt-root select:focus-visible,
+.bmt-root textarea:focus-visible {
+  outline: 2px solid var(--bmt-text-color);
+  outline-offset: 3px;
 }
 
 .bmt-filter-panel,
@@ -76,6 +106,8 @@
   padding: var(--bmt-item-padding);
   gap: 12px;
   cursor: pointer;
+  color: inherit;
+  font: inherit;
 }
 
 .bmt-item-content {
@@ -119,16 +151,39 @@
   padding: var(--bmt-spacing);
 }
 
-.bmt-detail-header {
+.bmt-detail-header,
+.bmt-panel-header {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: var(--bmt-spacing);
 }
 
-.bmt-detail-title {
+.bmt-detail-title,
+.bmt-panel-title {
   margin: 0;
   font-size: 16px;
+  align-self: center;
+  overflow-wrap: anywhere;
+}
+
+.bmt-detail-footer {
+  border-top: 1px solid var(--bmt-border-color);
+  margin-top: var(--bmt-spacing);
+  padding-top: var(--bmt-spacing);
+}
+
+.bmt-detail-footer .bmt-back-button {
+  width: 100%;
+}
+
+.bmt-filter-form input:not([type="checkbox"]):not([type="radio"]),
+.bmt-filter-form select,
+.bmt-filter-form textarea {
+  width: 100%;
+  min-height: 44px;
+  font: inherit;
 }
 
 .bmt-detail-fields,

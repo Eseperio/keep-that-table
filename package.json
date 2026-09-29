@@ -1,0 +1,9 @@
+{
+  "name": "better-mobile-table",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Responsive list-and-detail presentation for existing HTML tables",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  }
+}

@@ -7,16 +7,40 @@ const DEFAULT_OPTIONS = {
   movePagination: false,
   itemRenderer: null,
   detailRenderer: null,
-  texts: {
+  language: 'auto',
+  texts: {},
+};
+
+const TEXTS_BY_LANGUAGE = {
+  en: {
+    filterButton: 'Filter',
+    sortButton: 'Sort by',
+    backButton: 'Back to list',
+    closeButton: 'Close',
+    filterTitle: 'Filter by',
+    sortTitle: 'Sort by',
+    detailTitle: 'Viewing the selected record',
+    summaryTitle: 'Summary',
+    filterFallbackLabel: 'Filter',
+    detailAriaLabelPrefix: 'View details for',
+    detailRowFallback: 'row',
+  },
+  es: {
     filterButton: 'Filtrar',
     sortButton: 'Ordenar por',
-    backButton: 'Volver',
+    backButton: 'Volver al listado',
+    closeButton: 'Cerrar',
+    filterTitle: 'Filtrar por',
+    sortTitle: 'Ordenar por',
+    detailTitle: 'Viendo en detalle el registro seleccionado',
     summaryTitle: 'Resumen',
     filterFallbackLabel: 'Filtro',
     detailAriaLabelPrefix: 'Ver detalle de',
     detailRowFallback: 'fila',
   },
 };
+
+let instanceCounter = 0;
 
 function createElement(tag, className) {
   const element = document.createElement(tag);
@@ -84,11 +108,12 @@ class BetterMobileTable {
     }
 
     this.table = tableElement;
+    this.language = this._resolveLanguage(options.language);
     this.options = {
       ...DEFAULT_OPTIONS,
       ...options,
       texts: {
-        ...DEFAULT_OPTIONS.texts,
+        ...TEXTS_BY_LANGUAGE[this.language],
         ...(options.texts || {}),
       },
     };
@@ -100,6 +125,7 @@ class BetterMobileTable {
     this._filterControls = [];
     this._activeDetailIndex = null;
     this._uidCounter = 0;
+    this._instanceId = ++instanceCounter;
 
     this._createRoot();
     this.refresh();
@@ -111,18 +137,33 @@ class BetterMobileTable {
     this._onResize();
   }
 
+  _resolveLanguage(language = DEFAULT_OPTIONS.language) {
+    const documentLanguage = this.table.closest('[lang]')?.getAttribute('lang')
+      || document.documentElement.getAttribute('lang');
+    const browserLanguage = typeof navigator !== 'undefined' ? navigator.language : '';
+    const requestedLanguage = language === 'auto'
+      ? (documentLanguage || browserLanguage || 'en')
+      : language;
+    const normalizedLanguage = String(requestedLanguage).trim().toLowerCase().split(/[-_]/)[0];
+
+    return normalizedLanguage === 'es' ? 'es' : 'en';
+  }
+
   refresh() {
+    this.closeDetail({ restoreFocus: false });
     this._setSourcePaginationHidden(false);
     this._returnMovedNodes();
+    this._movedNodes = [];
     this.model = this._buildModel();
     this._render();
     this._onResize();
   }
 
   destroy() {
-    this.closeDetail();
+    this.closeDetail({ restoreFocus: false });
     this._setSourcePaginationHidden(false);
     this._returnMovedNodes();
+    this._movedNodes = [];
 
     this._disposables.forEach((dispose) => dispose());
     this._disposables = [];
@@ -143,15 +184,13 @@ class BetterMobileTable {
     this.listPanel.hidden = true;
     this.detailPanel.hidden = false;
 
-    this._renderDetail(this.model.rows[rowIndex], rowIndex);
+    this._renderDetail(this.model.rows[rowIndex]);
 
-    const backButton = this.detailPanel.querySelector('.bmt-back-button');
-    if (backButton) {
-      backButton.focus();
-    }
+    this.detailPanel.querySelector('.bmt-close-button')?.focus();
   }
 
-  closeDetail() {
+  closeDetail({ restoreFocus = true } = {}) {
+    const rowIndex = this._activeDetailIndex;
     this._activeDetailIndex = null;
 
     if (this.listPanel) {
@@ -161,6 +200,10 @@ class BetterMobileTable {
     if (this.detailPanel) {
       this.detailPanel.hidden = true;
       this.detailPanel.innerHTML = '';
+    }
+
+    if (restoreFocus && this.isMobile && rowIndex !== null && rowIndex !== undefined) {
+      this.list.querySelectorAll('.bmt-list-item')[rowIndex]?.focus();
     }
   }
 
@@ -173,12 +216,12 @@ class BetterMobileTable {
 
     this.listPanel = createElement('div', 'bmt-list-panel');
     this.list = createElement('div', 'bmt-list');
-    this.listPanel.appendChild(this.list);
+    this.listPanel.append(this.toolbar, this.list);
 
     this.detailPanel = createElement('div', 'bmt-detail');
     this.detailPanel.hidden = true;
 
-    this.root.append(this.toolbar, this.listPanel, this.detailPanel);
+    this.root.append(this.listPanel, this.detailPanel);
     this.table.insertAdjacentElement('afterend', this.root);
   }
 
@@ -372,7 +415,8 @@ class BetterMobileTable {
 
   _collectPagination() {
     const parent = this.table.parentElement || this.table;
-    return Array.from(parent.querySelectorAll('[data-mobile-pagination]'));
+    return Array.from(parent.querySelectorAll('[data-mobile-pagination]'))
+      .filter((node) => !this.root.contains(node));
   }
 
   _render() {
@@ -388,6 +432,7 @@ class BetterMobileTable {
   }
 
   _renderToolbar() {
+    this._toolbarPanels = [];
     const hasFilters = this.model.filters.length > 0;
     const hasSortLinks = this.model.sortLinks.length > 0;
 
@@ -398,81 +443,116 @@ class BetterMobileTable {
     this.toolbar.hidden = false;
 
     if (hasFilters) {
-      const filterButton = createElement('button', 'bmt-filter-button');
-      filterButton.type = 'button';
-      filterButton.textContent = this.options.texts.filterButton;
-
-      const panel = createElement('div', 'bmt-filter-panel');
-      panel.hidden = true;
-      panel.id = this._nextId('bmt-filter-panel');
-      filterButton.setAttribute('aria-controls', panel.id);
-      filterButton.setAttribute('aria-expanded', 'false');
+      const { panel } = this._createToolbarPanel(
+        'bmt-filter-button', 'bmt-filter-panel',
+        this.options.texts.filterButton, this.options.texts.filterTitle,
+      );
 
       const form = createElement('div', 'bmt-filter-form');
 
-      this.model.filters.forEach((entry, index) => {
+      this.model.filters.forEach((entry) => {
         const field = createElement('div', 'bmt-field');
         const label = createElement('label', 'bmt-field-label');
         label.textContent = entry.label;
-        label.htmlFor = entry.control.id || `bmt-filter-control-${index}`;
-
         if (!entry.control.id) {
-          entry.control.id = `bmt-filter-control-${index}`;
+          entry.control.id = this._nextId('bmt-filter-control');
         }
-
+        label.htmlFor = entry.control.id;
         field.append(label);
 
         if (this.options.moveFilters) {
-          const placeholder = document.createComment('bmt-filter-placeholder');
-          entry.control.parentNode?.insertBefore(placeholder, entry.control);
           this._movedNodes.push({
             node: entry.control,
-            placeholder,
+            target: field,
+            placeholder: null,
           });
-          field.append(entry.control);
         } else {
-          field.append(entry.control.cloneNode(true));
+          const clone = entry.control.cloneNode(true);
+          clone.id = this._nextId('bmt-filter-copy');
+          label.htmlFor = clone.id;
+          field.append(clone);
         }
 
         form.append(field);
       });
 
       panel.append(form);
-
-      filterButton.addEventListener('click', () => {
-        const next = panel.hidden;
-        panel.hidden = !next;
-        filterButton.setAttribute('aria-expanded', String(next));
-      });
-
-      this.toolbar.append(filterButton, panel);
     }
 
     if (hasSortLinks) {
-      const sortButton = createElement('button', 'bmt-sort-button');
-      sortButton.type = 'button';
-      sortButton.textContent = this.options.texts.sortButton;
-
-      const menu = createElement('div', 'bmt-sort-menu');
-      menu.hidden = true;
-      menu.id = this._nextId('bmt-sort-menu');
-      sortButton.setAttribute('aria-controls', menu.id);
-      sortButton.setAttribute('aria-expanded', 'false');
+      const { panel: menu } = this._createToolbarPanel(
+        'bmt-sort-button', 'bmt-sort-menu',
+        this.options.texts.sortButton, this.options.texts.sortTitle,
+      );
 
       this.model.sortLinks.forEach((link) => {
         const clone = link.cloneNode(true);
+        clone.removeAttribute('id');
         clone.classList.add('bmt-sort-link');
         menu.append(clone);
       });
-
-      sortButton.addEventListener('click', () => {
-        const next = menu.hidden;
-        menu.hidden = !next;
-        sortButton.setAttribute('aria-expanded', String(next));
-      });
-
-      this.toolbar.append(sortButton, menu);
     }
+
+    // Keep the available buttons above the open panel.
+    this._toolbarPanels.forEach(({ panel }) => this.toolbar.append(panel));
+  }
+
+  _createCloseButton() {
+    const button = createElement('button', 'bmt-close-button');
+    button.type = 'button';
+    button.setAttribute('aria-label', this.options.texts.closeButton);
+    const icon = createElement('span');
+    icon.textContent = '×';
+    icon.setAttribute('aria-hidden', 'true');
+    button.append(icon);
+    return button;
+  }
+
+  _createToolbarPanel(buttonClass, panelClass, buttonText, panelTitle) {
+    const button = createElement('button', buttonClass);
+    button.type = 'button';
+    button.textContent = buttonText;
+
+    const panel = createElement('section', panelClass);
+    panel.hidden = true;
+    panel.id = this._nextId(panelClass);
+    button.setAttribute('aria-controls', panel.id);
+    button.setAttribute('aria-expanded', 'false');
+
+    const header = createElement('div', 'bmt-panel-header');
+    const title = createElement('h3', 'bmt-panel-title');
+    title.textContent = panelTitle;
+    title.id = this._nextId('bmt-panel-title');
+    panel.setAttribute('aria-labelledby', title.id);
+    const closeButton = this._createCloseButton();
+    header.append(title, closeButton);
+    panel.append(header);
+
+    const entry = { button, panel };
+    this._toolbarPanels.push(entry);
+    const close = () => {
+      this._setToolbarPanelOpen(entry, false);
+      button.focus();
+    };
+    closeButton.addEventListener('click', close);
+    panel.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+      }
+    });
+    button.addEventListener('click', () => {
+      this._toolbarPanels.forEach((other) => this._setToolbarPanelOpen(other, other === entry));
+      (panel.querySelector('input,select,textarea') || closeButton).focus();
+    });
+    this.toolbar.append(button);
+    return entry;
+  }
+
+  _setToolbarPanelOpen({ button, panel }, open) {
+    panel.hidden = !open;
+    button.hidden = open;
+    button.setAttribute('aria-expanded', String(open));
   }
 
   _renderList() {
@@ -537,65 +617,56 @@ class BetterMobileTable {
     return wrapper;
   }
 
-  _renderDetail(row, rowIndex) {
+  _renderDetail(row) {
     const context = this._buildRendererContext(row);
+    let content = null;
 
     if (typeof this.options.detailRenderer === 'function') {
-      const customNode = toNode(this.options.detailRenderer(context));
-      if (customNode) {
-        this.detailPanel.innerHTML = '';
-
-        const header = createElement('div', 'bmt-detail-header');
-        const backButton = createElement('button', 'bmt-back-button');
-        backButton.type = 'button';
-        backButton.textContent = this.options.texts.backButton;
-        backButton.addEventListener('click', () => {
-          this.closeDetail();
-          this.list.querySelectorAll('.bmt-list-item')[rowIndex]?.focus();
-        });
-
-        const title = createElement('h3', 'bmt-detail-title');
-        title.textContent = context.title;
-        header.append(backButton, title);
-
-        this.detailPanel.append(header, customNode);
-        return;
-      }
+      content = toNode(this.options.detailRenderer(context));
     }
 
     const header = createElement('div', 'bmt-detail-header');
+    const title = createElement('h3', 'bmt-detail-title');
+    title.textContent = this.options.texts.detailTitle;
+    title.id = this._nextId('bmt-detail-title');
+    this.detailPanel.setAttribute('aria-labelledby', title.id);
+
+    const closeButton = this._createCloseButton();
+    closeButton.addEventListener('click', () => this.closeDetail());
+    header.append(title, closeButton);
+
+    if (!content) {
+      content = createElement('div', 'bmt-detail-fields');
+      row.cells.forEach((cell) => {
+        if (cell.hidden) {
+          return;
+        }
+
+        const field = createElement('div', 'bmt-field');
+        const label = createElement('div', 'bmt-field-label');
+        label.textContent = cell.label;
+        const value = createElement('div', 'bmt-field-value');
+        value.innerHTML = cell.html;
+        field.append(label, value);
+        content.append(field);
+      });
+    }
+
+    const footer = createElement('div', 'bmt-detail-footer');
     const backButton = createElement('button', 'bmt-back-button');
     backButton.type = 'button';
     backButton.textContent = this.options.texts.backButton;
-    backButton.addEventListener('click', () => {
-      this.closeDetail();
-      this.list.querySelectorAll('.bmt-list-item')[rowIndex]?.focus();
-    });
-
-    const title = createElement('h3', 'bmt-detail-title');
-    title.textContent = context.title;
-    header.append(backButton, title);
-
-    const fields = createElement('div', 'bmt-detail-fields');
-
-    row.cells.forEach((cell) => {
-      if (cell.hidden) {
-        return;
+    backButton.addEventListener('click', () => this.closeDetail());
+    footer.append(backButton);
+    this.detailPanel.onkeydown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        this.closeDetail();
       }
-
-      const field = createElement('div', 'bmt-field');
-      const label = createElement('div', 'bmt-field-label');
-      label.textContent = cell.label;
-
-      const value = createElement('div', 'bmt-field-value');
-      value.innerHTML = cell.html;
-
-      field.append(label, value);
-      fields.append(field);
-    });
+    };
 
     this.detailPanel.innerHTML = '';
-    this.detailPanel.append(header, fields);
+    this.detailPanel.append(header, content, footer);
   }
 
   _renderFooter() {
@@ -625,7 +696,7 @@ class BetterMobileTable {
       footer.append(field);
     });
 
-    this.root.append(footer);
+    this.listPanel.append(footer);
   }
 
   _renderPagination() {
@@ -642,16 +713,13 @@ class BetterMobileTable {
 
     this.model.pagination.forEach((node) => {
       if (this.options.movePagination) {
-        const placeholder = document.createComment('bmt-pagination-placeholder');
-        node.parentNode?.insertBefore(placeholder, node);
-        this._movedNodes.push({ node, placeholder });
-        paginationContainer.append(node);
+        this._movedNodes.push({ node, target: paginationContainer, placeholder: null });
       } else {
         paginationContainer.append(node.cloneNode(true));
       }
     });
 
-    this.root.append(paginationContainer);
+    this.listPanel.append(paginationContainer);
   }
 
   _buildRendererContext(row) {
@@ -696,6 +764,7 @@ class BetterMobileTable {
     this.isMobile = shouldBeMobile;
 
     if (shouldBeMobile) {
+      this._moveNodesToMobile();
       this.root.hidden = false;
       this.table.classList.add('bmt-table-hidden');
       this._setSourcePaginationHidden(true);
@@ -709,6 +778,7 @@ class BetterMobileTable {
       this._setSourcePaginationHidden(false);
       this.closeDetail();
       this._returnMovedNodes();
+      this._toolbarPanels.forEach((entry) => this._setToolbarPanelOpen(entry, false));
     }
   }
 
@@ -724,27 +794,34 @@ class BetterMobileTable {
 
   _nextId(prefix) {
     this._uidCounter += 1;
-    return `${prefix}-${this._uidCounter}`;
+    return `${prefix}-${this._instanceId}-${this._uidCounter}`;
+  }
+
+  _moveNodesToMobile() {
+    this._movedNodes.forEach((entry) => {
+      if (entry.placeholder || !entry.node.parentNode) {
+        return;
+      }
+      entry.placeholder = document.createComment('bmt-source-placeholder');
+      entry.node.parentNode.insertBefore(entry.placeholder, entry.node);
+      entry.target.append(entry.node);
+    });
   }
 
   _returnMovedNodes() {
-    this._movedNodes.forEach(({ node, placeholder }) => {
+    this._movedNodes.forEach((entry) => {
+      const { node, placeholder } = entry;
       if (placeholder?.parentNode) {
         placeholder.parentNode.insertBefore(node, placeholder);
         placeholder.parentNode.removeChild(placeholder);
       }
+      entry.placeholder = null;
     });
-
-    this._movedNodes = [];
   }
 }
 
 function matchesControl(node) {
   return node.matches('input,select,textarea');
-}
-
-if (typeof window !== 'undefined') {
-  window.BetterMobileTable = BetterMobileTable;
 }
 
 export default BetterMobileTable;

@@ -1,0 +1,172 @@
+body.demo-page {
+  min-height: 100vh;
+  background: #f3f6fb;
+}
+
+.demo-header {
+  color: #fff;
+  background: linear-gradient(120deg, #173b67, #286da8);
+  padding: 28px 0;
+  margin-bottom: 24px;
+}
+
+.demo-header h1 {
+  margin: 0 0 8px;
+  font-size: clamp(24px, 3vw, 34px);
+}
+
+.demo-nav-link {
+  display: inline-block;
+  margin-bottom: 10px;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.demo-header p {
+  margin: 0;
+  opacity: .88;
+}
+
+.demo-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 24px;
+  align-items: start;
+  padding-bottom: 40px;
+}
+
+.demo-content,
+.demo-settings {
+  background: #fff;
+  border: 1px solid #dfe5ed;
+  border-radius: 12px;
+  box-shadow: 0 5px 22px rgb(24 45 75 / 6%);
+}
+
+.demo-content {
+  min-width: 0;
+  padding: 22px;
+}
+
+.demo-settings {
+  padding: 18px;
+}
+
+.demo-settings h2,
+.demo-content h2 {
+  margin-top: 0;
+}
+
+.demo-setting {
+  margin-bottom: 14px;
+}
+
+.demo-setting label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.demo-setting .form-check label {
+  display: inline;
+  font-weight: 400;
+}
+
+.demo-setting small {
+  display: block;
+  margin-top: 4px;
+  color: #687586;
+}
+
+.demo-mobile-summary {
+  display: grid;
+  width: 100%;
+  gap: 4px;
+  text-align: left;
+}
+
+.demo-mobile-summary .badge {
+  justify-self: start;
+  margin-bottom: 3px;
+}
+
+.demo-mobile-summary .label {
+  justify-self: start;
+  width: max-content;
+  margin-bottom: 3px;
+}
+
+.demo-mobile-summary strong {
+  font-size: 1.05em;
+}
+
+.demo-mobile-summary small {
+  color: #687586;
+}
+
+.demo-detail-label {
+  display: block;
+}
+
+.demo-table-shell.demo-mobile-table-active {
+  overflow: visible;
+}
+
+.demo-rendered-detail {
+  margin-top: 10px;
+  padding: 16px;
+}
+
+.demo-status {
+  white-space: nowrap;
+}
+
+.demo-footer-note {
+  margin-top: 16px;
+  color: #687586;
+  font-size: 13px;
+}
+
+.demo-settings .form-control,
+.demo-settings .form-select {
+  max-width: 100%;
+}
+
+body[data-bootstrap-version="5"] .bmt-root {
+  --bmt-bg: var(--bs-body-bg, #fff);
+  --bmt-text-color: var(--bs-body-color, #212529);
+  --bmt-muted-color: var(--bs-secondary-color, #6c757d);
+  --bmt-border-color: var(--bs-border-color, #dee2e6);
+  --bmt-radius: var(--bs-border-radius, .375rem);
+  --bmt-font-size: var(--bs-body-font-size, 1rem);
+}
+
+body[data-bootstrap-version="3"] .bmt-root {
+  --bmt-bg: #fff;
+  --bmt-text-color: #333;
+  --bmt-muted-color: #777;
+  --bmt-border-color: #ddd;
+  --bmt-radius: 4px;
+  --bmt-font-size: 14px;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+body[data-bootstrap-version="3"] .demo-header .label {
+  color: #173b67;
+}
+
+@media (max-width: 767px) {
+  .demo-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .demo-settings {
+    grid-row: 1;
+  }
+
+  .demo-content {
+    padding: 16px;
+  }
+}
